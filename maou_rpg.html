@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔王はぬぬの逆襲？</title>
+<style>
+    :root {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --accent-color: #4caf50;
+        --danger-color: #f44336;
+        --highlight-color: #ff9800;
+        --panel-bg: #2d2d2d;
+        --border-color: #444;
+    }
+    body {
+        font-family: 'Courier New', monospace;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+    }
+    #game-container {
+        width: 100%;
+        max-width: 800px;
+        background-color: var(--panel-bg);
+        border: 2px solid var(--border-color);
+        padding: 20px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+    }
+    h1, h2, h3 { text-align: center; margin-top: 0; color: var(--highlight-color); }
+    button {
+        background-color: var(--border-color);
+        color: var(--text-color);
+        border: 1px solid var(--text-color);
+        padding: 10px 15px;
+        margin: 5px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.2s;
+    }
+    button:hover { background-color: var(--accent-color); color: black; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .screen { display: none; }
+    .active { display: block; }
+    
+    /* Character Select */
+    .char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .char-card { border: 1px solid var(--border-color); padding: 10px; text-align: center; cursor: pointer; }
+    .char-card.selected { border-color: var(--accent-color); background-color: #333; }
+    
+    /* Stats & Shop */
+    .status-panel { display: flex; justify-content: space-around; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px; }
+    .char-status { width: 30%; min-width: 200px; margin-bottom: 10px; background: #222; padding: 10px; box-sizing: border-box;}
+    .stat-row { display: flex; justify-content: space-between; font-size: 0.9em; }
+    .shop-item { display: flex; justify-content: space-between; border-bottom: 1px dotted #555; padding: 5px; }
+    
+    /* Battle */
+    #battle-log {
+        height: 150px;
+        overflow-y: scroll;
+        background: #111;
+        border: 1px solid #555;
+        padding: 10px;
+        margin-bottom: 10px;
+        font-size: 0.9em;
+        white-space: pre-wrap;
+    }
+    .log-entry { margin-bottom: 4px; }
+    .turn-order { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
+    .hp-bar-container { width: 100%; background: #444; height: 10px; margin-top: 2px; }
+    .hp-bar { height: 100%; background: var(--accent-color); width: 100%; transition: width 0.3s; }
+    .mp-bar { height: 100%; background: #2196f3; width: 100%; transition: width 0.3s; }
+    
+    .enemy-display { text-align: center; margin: 20px 0; font-size: 1.2em; color: var(--danger-color); }
+    
+    /* Utility */
+    .text-red { color: var(--danger-color); }
+    .text-green { color: var(--accent-color); }
+    .text-blue { color: #2196f3; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="screen-title" class="screen active">
+        <h1>RPG: 誤解された魔王</h1>
+        <p style="text-align:center;">魔王はぬぬを倒すため、最強のパーティを結成せよ。</p>
+        <div style="text-align:center; margin-top:50px;">
+            <button onclick="Game.toCharSelect()">ゲームスタート</button>
+        </div>
+    </div>
+
+    <div id="screen-select" class="screen">
+        <h2>主人公を選択してください</h2>
+        <div id="char-select-grid" class="char-grid"></div>
+        <div style="text-align:center; margin-top:20px;">
+            <p id="select-instruction">主人公を選んでください</p>
+            <button id="confirm-btn" onclick="Game.confirmSelection()" disabled>決定</button>
+        </div>
+    </div>
+
+    <div id="screen-hub" class="screen">
+        <h3 id="floor-indicator">現在地: 第1階層</h3>
+        <div class="status-panel" id="hub-status"></div>
+        
+        <div style="display:flex; gap:20px;">
+            <div style="flex:1;">
+                <h4>能力強化 (残ポイント消費)</h4>
+                <div id="stat-allocation"></div>
+            </div>
+            <div style="flex:1;">
+                <h4>ショップ (所持金: <span id="gold-display">0</span>G)</h4>
+                <div id="shop-list"></div>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-top:20px; border-top: 1px solid #555; padding-top:20px;">
+            <button onclick="Game.startBattle()">>> 次の階層へ進む <<</button>
+        </div>
+    </div>
+
+    <div id="screen-battle" class="screen">
+        <div class="turn-order" id="turn-order-display">行動順: </div>
+        <div class="enemy-display">
+            <div id="enemy-name">モンスター</div>
+            <div class="hp-bar-container" style="width:50%; margin:0 auto;"><div id="enemy-hp" class="hp-bar"></div></div>
+            <div id="enemy-stats" style="font-size:0.8em;">HP: ???</div>
+        </div>
+        
+        <div class="status-panel" id="battle-status"></div>
+        
+        <div id="battle-log"></div>
+        
+        <div id="command-panel" style="text-align:center;">
+            <h4 id="active-char-name">--のターン</h4>
+            <button onclick="Battle.playerAction('attack')">攻撃</button>
+            <button onclick="Battle.playerAction('skill')" id="btn-skill">スキル</button>
+            <button onclick="Battle.playerAction('guard')">防御</button>
+        </div>
+    </div>
+
+    <div id="screen-ending" class="screen">
+        <h1>CONGRATULATIONS!</h1>
+        <div id="ending-text" style="white-space: pre-wrap; line-height: 1.6;"></div>
+        <div style="text-align:center; margin-top:50px;">
+            <button onclick="location.reload()">タイトルへ戻る</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* --- 定数・データ定義 --- */
+const ROLES = {
+    nayuta: { name: "勇者：なゆた", stats: { str: 8, int: 5, agi: 6 }, skill: "勇気の叫び", desc: "味方全員の攻撃力を3ターン上昇" },
+    kakapo: { name: "魔法：カカポ", stats: { str: 3, int: 10, agi: 5 }, skill: "極大魔法", desc: "敵に知力×4の特大ダメージ(MP大)" },
+    fum:    { name: "僧侶：fum", stats: { str: 4, int: 8, agi: 5 }, skill: "聖なる光", desc: "味方全員のHPを回復" },
+    yj:     { name: "戦士：YJ", stats: { str: 10, int: 2, agi: 4 }, skill: "マッスルガード", desc: "1ターン自分へのダメージを0にする" },
+    usan:   { name: "工匠：うーさん", stats: { str: 5, int: 9, agi: 6 }, skill: "デバッグ", desc: "敵の防御力と攻撃力を下げる" },
+    akki:   { name: "マク：あっきー", stats: { str: 6, int: 6, agi: 7 }, skill: "課金攻撃", desc: "所持金50Gを消費して固定大ダメージ" },
+    akachan:{ name: "女優：あかちゃん", stats: { str: 4, int: 7, agi: 8 }, skill: "名演技", desc: "敵を魅了して1ターン行動不能にする" },
+    shira:  { name: "自由：しらさか", stats: { str: 6, int: 6, agi: 9 }, skill: "気まぐれ", desc: "何が起こるかわからない(回復/攻撃/自爆)" },
+    nyanya: { name: "創造：にゃーにゃ", stats: { str: 5, int: 8, agi: 6 }, skill: "創造召喚", desc: "味方全員にバリア(HP一時増強)を付与" },
+    kokona: { name: "食い：ここな", stats: { str: 7, int: 4, agi: 6 }, skill: "もぐもぐ", desc: "敵のHPを吸収して回復する" }
+};
+
+const SHOP_ITEMS = [
+    { name: "薬草", cost: 20, type: "item", effect: "heal_50" },
+    { name: "ロングソード", cost: 150, type: "equip", stat: "atk", val: 10 },
+    { name: "魔法の杖", cost: 150, type: "equip", stat: "matk", val: 10 },
+    { name: "鉄の鎧", cost: 150, type: "equip", stat: "def", val: 5 },
+    { name: "スピードブーツ", cost: 150, type: "equip", stat: "spd", val: 5 },
+    { name: "マッスルベルト", cost: 500, type: "equip", stat: "hp", val: 100 },
+    { name: "魔導書", cost: 500, type: "equip", stat: "mp", val: 50 }
+];
+
+const ENEMIES = [
+    { name: "スライム", hp: 80, atk: 15, exp: 10, gold: 10 },
+    { name: "ゴブリン", hp: 120, atk: 25, exp: 20, gold: 20 },
+    { name: "オーク", hp: 200, atk: 40, exp: 35, gold: 30 },
+    { name: "キメラ", hp: 350, atk: 60, exp: 50, gold: 50 },
+    { name: "ゴーレム", hp: 600, atk: 80, exp: 80, gold: 70 },
+    { name: "ドラゴン", hp: 1000, atk: 120, exp: 150, gold: 150 },
+    { name: "深淵の影", hp: 1500, atk: 150, exp: 250, gold: 300 },
+    { name: "四天王代理", hp: 2200, atk: 200, exp: 400, gold: 500 },
+    { name: "韓国ドラマ好き：ゆう", hp: 5000, atk: 300, exp: 1000, gold: 1000, isBoss: true, skill:"ネタバレ攻撃" }, // 9階層
+    { name: "魔王：はぬぬ", hp: 10000, atk: 450, exp: 0, gold: 0, isBoss: true } // 10階層
+];
+
+/* --- ゲーム状態 --- */
+const State = {
+    party: [], // { id, hp, maxHp, mp, maxMp, str, int, agi, exp, pts, eq:[] }
+    inventory: [],
+    gold: 100,
+    floor: 1,
+    selectedChars: [],
+    phase: 'title'
+};
+
+/* --- システム・UI制御 --- */
+const Game = {
+    toCharSelect: () => {
+        document.getElementById('screen-title').classList.remove('active');
+        document.getElementById('screen-select').classList.add('active');
+        Game.renderCharSelect();
+    },
+    renderCharSelect: () => {
+        const grid = document.getElementById('char-select-grid');
+        grid.innerHTML = '';
+        Object.keys(ROLES).forEach(key => {
+            const char = ROLES[key];
+            const div = document.createElement('div');
+            div.className = 'char-card';
+            div.innerHTML = `<b>${char.name}</b><br>S:${char.stats.str} I:${char.stats.int} A:${char.stats.agi}<br><small>${char.skill}</small>`;
+            div.onclick = () => Game.selectChar(key, div);
+            div.dataset.id = key;
+            grid.appendChild(div);
+        });
+    },
+    selectChar: (key, el) => {
+        const idx = State.selectedChars.indexOf(key);
+        if (idx >= 0) {
+            State.selectedChars.splice(idx, 1); // 選択解除
+            el.classList.remove('selected');
+        } else {
+            if (State.selectedChars.length < 3) {
+                State.selectedChars.push(key);
+                el.classList.add('selected');
+            }
+        }
+        
+        const count = State.selectedChars.length;
+        const btn = document.getElementById('confirm-btn');
+        const text = document.getElementById('select-instruction');
+        
+        if (count === 0) text.textContent = "主人公を選んでください";
+        else if (count === 1) text.textContent = "仲間をあと2名選んでください";
+        else if (count === 2) text.textContent = "仲間をあと1名選んでください";
+        else text.textContent = "このメンバーで冒険に出ますか？";
+        
+        btn.disabled = count !== 3;
+    },
+    confirmSelection: () => {
+        // パーティ初期化
+        State.party = State.selectedChars.map(key => {
+            const base = ROLES[key];
+            return {
+                id: key,
+                name: base.name,
+                baseStats: { ...base.stats },
+                addStats: { str:0, int:0, agi:0 },
+                skill: base.skill,
+                hp: 0, maxHp: 0, mp: 0, maxMp: 0,
+                atk: 0, def: 0, spd: 0,
+                pts: 5, // 初期ボーナス
+                buffs: {}
+            };
+        });
+        Game.recalcStats();
+        Game.fullHeal(); // 全回復
+        
+        document.getElementById('screen-select').classList.remove('active');
+        Game.toHub();
+    },
+    recalcStats: () => {
+        State.party.forEach(p => {
+            const s = p.baseStats;
+            const a = p.addStats;
+            const totalStr = s.str + a.str;
+            const totalInt = s.int + a.int;
+            const totalAgi = s.agi + a.agi;
+            
+            // ステータス計算式
+            // 装備補正は簡易的にここで加算せず、戦闘時に参照するか、変数分けるが今回はシンプルに
+            // ここでは基礎パラメータ
+            p.maxHp = 50 + (totalStr * 15);
+            p.maxMp = 20 + (totalInt * 10);
+            p.atk = 10 + (totalStr * 3);
+            p.matk = 10 + (totalInt * 3); // 魔法力/回復力
+            p.def = totalStr + (totalInt/2);
+            p.spd = totalAgi * 2;
+            
+            if(p.hp > p.maxHp) p.hp = p.maxHp;
+            if(p.mp > p.maxMp) p.mp = p.maxMp;
+        });
+    },
+    fullHeal: () => {
+        State.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+    },
+    toHub: () => {
+        document.getElementById('screen-battle').classList.remove('active');
+        document.getElementById('screen-hub').classList.add('active');
+        
+        document.getElementById('floor-indicator').textContent = `現在地: 第${State.floor}階層 (目標: 第10階層)`;
+        document.getElementById('gold-display').textContent = State.gold;
+        
+        Game.renderHubStats();
+        Game.renderShop();
+    },
+    renderHubStats: () => {
+        const container = document.getElementById('hub-status');
+        const allocContainer = document.getElementById('stat-allocation');
+        container.innerHTML = '';
+        allocContainer.innerHTML = '';
+        
+        State.party.forEach((p, idx) => {
+            // 上部ステータス表示
+            container.innerHTML += `
+                <div class="char-status">
+                    <div style="font-weight:bold; color:${['#ff8888','#88ff88','#8888ff'][idx]}">${p.name}</div>
+                    <div class="stat-row"><span>HP: ${p.hp}/${p.maxHp}</span><span>MP: ${p.mp}/${p.maxMp}</span></div>
+                    <div class="stat-row"><span>攻: ${p.atk}</span><span>魔: ${p.matk}</span><span>速: ${p.spd}</span></div>
+                    <div class="stat-row"><span>筋:${p.baseStats.str+p.addStats.str} 知:${p.baseStats.int+p.addStats.int} 敏:${p.baseStats.agi+p.addStats.agi}</span></div>
+                </div>`;
+            
+            // ポイント割り振りUI
+            allocContainer.innerHTML += `
+                <div style="margin-bottom:10px; border-bottom:1px solid #444;">
+                    <div>${p.name} (残Pt: ${p.pts})</div>
+                    <button onclick="Game.addStat(${idx}, 'str')" ${p.pts<=0?'disabled':''}>筋力UP</button>
+                    <button onclick="Game.addStat(${idx}, 'int')" ${p.pts<=0?'disabled':''}>知力UP</button>
+                    <button onclick="Game.addStat(${idx}, 'agi')" ${p.pts<=0?'disabled':''}>敏捷UP</button>
+                </div>`;
+        });
+    },
+    addStat: (charIdx, type) => {
+        const p = State.party[charIdx];
+        if (p.pts > 0) {
+            p.pts--;
+            p.addStats[type]++;
+            Game.recalcStats();
+            // HP/MPが増えた分だけ現在値も増やす
+            if(type==='str') p.hp += 15;
+            if(type==='int') p.mp += 10;
+            Game.renderHubStats();
+        }
+    },
+    renderShop: () => {
+        const list = document.getElementById('shop-list');
+        list.innerHTML = '';
+        SHOP_ITEMS.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            let desc = item.type === 'item' ? "回復" : `${item.stat.toUpperCase()}+${item.val}`;
+            div.innerHTML = `
+                <span>${item.name} (${desc})</span>
+                <button onclick="Game.buyItem(${idx})" ${State.gold < item.cost ? 'disabled' : ''}>${item.cost}G</button>
+            `;
+            list.appendChild(div);
+        });
+    },
+    buyItem: (itemIdx) => {
+        const item = SHOP_ITEMS[itemIdx];
+        if (State.gold >= item.cost) {
+            State.gold -= item.cost;
+            document.getElementById('gold-display').textContent = State.gold;
+            
+            if (item.type === 'item') {
+                // 即時使用（簡易化）
+                State.party.forEach(p => {
+                   p.hp = Math.min(p.maxHp, p.hp + 50); 
+                });
+                alert("全員のHPを50回復しました！");
+            } else {
+                // 装備＝永続ステータスアップとして処理（簡易化）
+                State.party.forEach(p => {
+                    if (item.stat === 'atk') p.addStats.str += Math.ceil(item.val/3);
+                    if (item.stat === 'matk') p.addStats.int += Math.ceil(item.val/3);
+                    if (item.stat === 'def') p.addStats.str += Math.ceil(item.val/3); // 防御は筋力依存
+                    if (item.stat === 'spd') p.addStats.agi += Math.ceil(item.val/2);
+                    if (item.stat === 'hp') p.baseStats.str += 5; // HPアクセ
+                    if (item.stat === 'mp') p.baseStats.int += 5;
+                });
+                Game.recalcStats();
+                alert(`全員が${item.name}を装備し、能力が向上しました！`);
+            }
+            Game.renderHubStats();
+            Game.renderShop();
+        }
+    },
+    startBattle: () => {
+        document.getElementById('screen-hub').classList.remove('active');
+        document.getElementById('screen-battle').classList.add('active');
+        Battle.init(State.floor);
+    }
+};
+
+/* --- 戦闘システム --- */
+const Battle = {
+    turnQueue: [],
+    currentEnemy: null,
+    activeCharIdx: -1,
+    logEl: null,
+    
+    init: (floor) => {
+        Battle.logEl = document.getElementById('battle-log');
+        Battle.logEl.innerHTML = '';
+        Battle.log(`----- 第${floor}階層 -----`);
+        
+        // 敵生成
+        const enemyData = ENEMIES[floor - 1];
+        Battle.currentEnemy = { ...enemyData, maxHp: enemyData.hp };
+        
+        Battle.updateEnemyDisplay();
+        Battle.updatePartyDisplay();
+        
+        // 行動順計算 (CTBに近い形式)
+        // シンプルに1ラウンドごとの素早さ順ソートリストを作成してループさせる
+        Battle.startRound();
+    },
+    log: (msg) => {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.textContent = msg;
+        Battle.logEl.prepend(div); // 新しいログを上に
+    },
+    updateEnemyDisplay: () => {
+        const e = Battle.currentEnemy;
+        document.getElementById('enemy-name').textContent = e.name;
+        const pct = Math.max(0, (e.hp / e.maxHp) * 100);
+        document.getElementById('enemy-hp').style.width = `${pct}%`;
+        document.getElementById('enemy-stats').textContent = `HP: ${e.hp}/${e.maxHp}`;
+    },
+    updatePartyDisplay: () => {
+        const container = document.getElementById('battle-status');
+        container.innerHTML = '';
+        State.party.forEach(p => {
+            let statusTxt = "";
+            if(p.hp <= 0) statusTxt = "<span class='text-red'>[戦闘不能]</span>";
+            
+            container.innerHTML += `
+                <div class="char-status" style="border: ${Battle.turnQueue[0]===p ? '2px solid white' : '1px solid #444'}">
+                    <div>${p.name} ${statusTxt}</div>
+                    <div class="hp-bar-container"><div class="hp-bar" style="width:${Math.max(0,(p.hp/p.maxHp)*100)}%"></div></div>
+                    <div style="font-size:0.8em">HP:${p.hp}</div>
+                    <div class="hp-bar-container" style="background:#222"><div class="mp-bar" style="width:${Math.max(0,(p.mp/p.maxMp)*100)}%"></div></div>
+                    <div style="font-size:0.8em">MP:${p.mp}</div>
+                </div>
+            `;
+        });
+    },
+    startRound: () => {
+        // 素早さ順に並べる（敵も含める）
+        let entities = [...State.party.filter(p=>p.hp>0), Battle.currentEnemy];
+        
+        // 乱数を少し混ぜて並べ替え
+        entities.sort((a, b) => {
+            const spdA = (a.spd || (a.isBoss ? 50 : 10)) + Math.random() * 5;
+            const spdB = (b.spd || (b.isBoss ? 50 : 10)) + Math.random() * 5;
+            return spdB - spdA;
+        });
+        
+        Battle.turnQueue = entities;
+        Battle.updateTurnOrder();
+        Battle.nextTurn();
+    },
+    updateTurnOrder: () => {
+        const names = Battle.turnQueue.map(e => e.name).join(" → ");
+        document.getElementById('turn-order-display').textContent = "行動順: " + names;
+    },
+    nextTurn: () => {
+        if (Battle.checkWinLose()) return;
+        
+        if (Battle.turnQueue.length === 0) {
+            Battle.startRound();
+            return;
+        }
+        
+        const actor = Battle.turnQueue.shift();
+        Battle.updateTurnOrder();
+        Battle.updatePartyDisplay();
+        
+        if (actor.hp <= 0) { // 死んでたらスキップ
+            Battle.nextTurn();
+            return;
+        }
+
+        if (actor === Battle.currentEnemy) {
+            // 敵のターン
+            setTimeout(Battle.enemyAction, 800);
+        } else {
+            // プレイヤーのターン
+            document.getElementById('command-panel').style.display = 'block';
+            document.getElementById('active-char-name').textContent = `${actor.name} の行動`;
+            // スキルボタンの更新
+            const btnSkill = document.getElementById('btn-skill');
+            btnSkill.textContent = `スキル: ${actor.skill}`;
+            
+            // アクティブキャラを保存
+            Battle.activeCharIdx = State.party.indexOf(actor);
+        }
+    },
+    playerAction: (type) => {
+        const actor = State.party[Battle.activeCharIdx];
+        const enemy = Battle.currentEnemy;
+        document.getElementById('command-panel').style.display = 'none';
+        
+        if (type === 'attack') {
+            const dmg = Math.max(1, Math.floor(actor.atk * (1 + Math.random()*0.2)) - Math.floor(State.floor * 5));
+            enemy.hp -= dmg;
+            Battle.log(`${actor.name}の攻撃！ ${dmg}のダメージ！`);
+        } else if (type === 'guard') {
+            actor.buffs['guard'] = true;
+            Battle.log(`${actor.name}は身を守っている。`);
+        } else if (type === 'skill') {
+            if (actor.mp < 10 && actor.id !== 'akki') { // あっきーは金消費なので除外
+                Battle.log("MPが足りない！");
+                Battle.playerAction('attack'); // 強制通常攻撃
+                return;
+            }
+            
+            Battle.executeSkill(actor, enemy);
+        }
+        
+        Battle.updateEnemyDisplay();
+        setTimeout(Battle.nextTurn, 500);
+    },
+    executeSkill: (actor, enemy) => {
+        // キャラスキル分岐
+        const id = actor.id;
+        let dmg = 0;
+        
+        if (id !== 'akki') actor.mp -= 10; // 共通コスト
+        
+        switch(id) {
+            case 'nayuta': // 攻撃UP
+                 State.party.forEach(p => p.buffs['atkUp'] = 3);
+                 Battle.log("「みんな、いけるぞ！」味方全員の攻撃力が上がった！");
+                 break;
+            case 'kakapo': // 魔法大ダメ
+                 dmg = Math.floor(actor.matk * 4);
+                 enemy.hp -= dmg;
+                 Battle.log(`メラゾ...ファイア！ ${dmg}の魔法ダメージ！`);
+                 break;
+            case 'fum': // 全体回復
+                 State.party.forEach(p => { if(p.hp>0) p.hp = Math.min(p.maxHp, p.hp + actor.matk * 3); });
+                 Battle.log("癒やしの光！味方全員が回復した。");
+                 break;
+            case 'yj': // 完全ガード
+                 actor.buffs['invincible'] = true;
+                 Battle.log("筋肉硬化！全ての攻撃を弾き返す構えだ！");
+                 break;
+            case 'usan': // デバッグ(敵弱体)
+                 enemy.atk = Math.floor(enemy.atk * 0.8);
+                 Battle.log("敵のパラメータを書き換えた！敵の攻撃力が下がった。");
+                 break;
+            case 'akki': // 課金
+                 if (State.gold >= 50) {
+                     State.gold -= 50;
+                     dmg = 200 + (State.floor * 50); // 固定ダメ
+                     enemy.hp -= dmg;
+                     Battle.log(`50Gを投げつけた！ ${dmg}のダメージ！(残金:${State.gold}G)`);
+                 } else {
+                     Battle.log("金が足りない！ミス！");
+                 }
+                 break;
+            case 'akachan': // 魅了
+                 enemy.stunned = true;
+                 Battle.log("「ねえ、お願い♡」敵は見とれて動けない！");
+                 break;
+            case 'shira': // ランダム
+                 const r = Math.random();
+                 if(r < 0.3) { dmg = actor.atk * 3; enemy.hp -= dmg; Battle.log(`会心の一撃！${dmg}ダメ！`); }
+                 else if(r < 0.6) { State.party.forEach(p => p.hp += 50); Battle.log("謎のダンスでみんな回復した。"); }
+                 else { Battle.log("何も起こらなかった...自由だ。"); }
+                 break;
+            case 'nyanya': // バリア
+                 State.party.forEach(p => p.hp += 50); // 疑似バリア（回復として処理）
+                 Battle.log("何かを作り出した！盾になりダメージを防ぐ！");
+                 break;
+            case 'kokona': // 吸収
+                 dmg = actor.atk + actor.matk;
+                 enemy.hp -= dmg;
+                 actor.hp = Math.min(actor.maxHp, actor.hp + dmg);
+                 Battle.log(`敵を齧った！${dmg}ダメ与え、自分も回復！`);
+                 break;
+        }
+    },
+    enemyAction: () => {
+        const enemy = Battle.currentEnemy;
+        
+        if (enemy.stunned) {
+            Battle.log(`${enemy.name}は見とれて動けない！`);
+            enemy.stunned = false;
+            Battle.nextTurn();
+            return;
+        }
+
+        // ターゲット選択（生きているキャラからランダム）
+        const targets = State.party.filter(p => p.hp > 0);
+        if (targets.length === 0) return; // 全滅
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        
+        let dmg = Math.max(0, enemy.atk - target.def);
+        if (enemy.isBoss) dmg = Math.floor(dmg * 1.5); // ボス補正
+        
+        // 特殊行動：ゆう（9F）
+        if (State.floor === 9 && Math.random() < 0.3) {
+             Battle.log("ゆう「このドラマの続き、言っちゃおうかな〜」");
+             Battle.log("全員に精神的ダメージ！");
+             State.party.forEach(p => { if(p.hp>0) p.hp -= 50; });
+        }
+        // 特殊行動：はぬぬ（10F）
+        else if (State.floor === 10 && Math.random() < 0.2) {
+             Battle.log("はぬぬ「お茶でもどうだい？」");
+             Battle.log("あまりの優しさに戦意喪失！攻撃力が下がった。");
+             target.buffs['atkDown'] = true;
+        }
+        else {
+            // 通常攻撃
+            if (target.buffs['invincible']) {
+                dmg = 0;
+                Battle.log(`${target.name}の筋肉が攻撃を弾いた！`);
+                target.buffs['invincible'] = false;
+            } else if (target.buffs['guard']) {
+                dmg = Math.floor(dmg / 2);
+                target.buffs['guard'] = false;
+            }
+            
+            target.hp -= dmg;
+            Battle.log(`${enemy.name}の攻撃！ ${target.name}に${dmg}のダメージ！`);
+        }
+
+        Battle.updatePartyDisplay();
+        Battle.nextTurn();
+    },
+    checkWinLose: () => {
+        if (Battle.currentEnemy.hp <= 0) {
+            Battle.win();
+            return true;
+        }
+        if (State.party.every(p => p.hp <= 0)) {
+            Battle.lose();
+            return true;
+        }
+        return false;
+    },
+    win: () => {
+        Battle.updateEnemyDisplay();
+        Battle.log("勝利！！");
+        
+        if (State.floor === 10) {
+            setTimeout(Game.showEnding, 2000);
+        } else {
+            const exp = Battle.currentEnemy.exp;
+            const gold = Battle.currentEnemy.gold;
+            State.gold += gold;
+            State.party.forEach(p => {
+                if(p.hp > 0) { // 生存者のみ経験値
+                    p.pts += 2; // レベルアップ相当のPt付与
+                }
+            });
+            
+            setTimeout(() => {
+                alert(`戦闘勝利！\n獲得賞金: ${gold}G\n生存メンバーは能力強化ポイントを2獲得！`);
+                State.floor++;
+                Game.toHub();
+            }, 1000);
+        }
+    },
+    lose: () => {
+        setTimeout(() => {
+            alert("全滅しました...この階層からやり直します。");
+            Game.fullHeal();
+            Game.toHub(); // Hubに戻す（再挑戦）
+        }, 1000);
+    }
+};
+
+Game.showEnding = () => {
+    document.getElementById('screen-battle').classList.remove('active');
+    document.getElementById('screen-ending').classList.add('active');
+    
+    const text = document.getElementById('ending-text');
+    text.textContent = `
+    激闘の末、魔王はぬぬは膝をついた。
+    
+    はぬぬ「まいった、まいった。みんな強いわ～」
+    
+    魔王は笑顔でお茶とお菓子を差し出してきた。
+    
+    はぬぬ「でもみんななんで襲ってきたのかしら～？
+    『魔王』ってただのあだ名で、はぬぬはPTAやってる普通のママよ～」
+    
+    ...なんと、魔王はぬぬは、ただのめちゃくちゃイイ人だったのだ！
+    
+    ゆう「あ、はぬぬお疲れー！また絡まれてたんかー」
+    はぬぬ「よくあることだからもう気にしてないわよ～」
+    
+    こうして、世界（？）の平和は守られた。
+    勇者たちは、はぬぬにご馳走になり、仲良く帰路についたのだった。
+    
+    〜 FIN 〜
+    `;
+};
+
+</script>
+</body>
+</html>
