@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>はぬぬんクエスト ～PTAな勇者たち～ Ver.0.3</title>
+<title>はぬぬんクエスト ～PTAな勇者たち～ Ver.0.4</title>
 <style>
     :root {
         --bg-color: #212529;
@@ -97,6 +97,23 @@
     .stat-btn-group { display: flex; gap: 5px; margin-top: 5px; }
     .stat-btn-group button { flex: 1; padding: 5px; font-size: 0.8rem; min-height: 35px; }
 
+    .skill-info {
+        background: rgba(0,0,0,0.5);
+        padding: 6px 8px;
+        margin-top: 6px;
+        border-left: 3px solid var(--highlight-color);
+        font-size: 0.8em;
+        line-height: 1.4;
+    }
+    .skill-info-title {
+        font-weight: bold;
+        color: var(--highlight-color);
+        margin-bottom: 2px;
+    }
+    .skill-info-desc {
+        color: #ccc;
+    }
+
     #battle-area {
         display: flex;
         flex-direction: column;
@@ -176,14 +193,35 @@
     .c-red { color: #e74c3c; }
     .c-green { color: #2ecc71; }
     .c-blue { color: #3498db; }
+
+    .help-button {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: var(--highlight-color);
+        color: #000;
+        border: none;
+        font-weight: bold;
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 99;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        transition: all 0.2s;
+    }
+    .help-button:active {
+        transform: scale(0.9);
+    }
 </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="screen-title" class="screen active" style="text-align:center;">
-        <h1 style="font-size:2.2rem; margin-top:50px;">はぬぬん<br>クエストv0.3</h1>
-        <h3 style="color:#fff;">Ver 0.3</h3>
+        <h1 style="font-size:2.2rem; margin-top:50px;">はぬぬん<br>クエスト</h1>
+        <h3 style="color:#fff;">Ver 0.4</h3>
         <p>PTAな勇者たちと挑む<br>地域密着型RPG</p>
         <button onclick="Game.toHeroSelect()" style="width:80%; margin-top:30px; font-size:1.2rem;">ゲームスタート</button>
         <button onclick="Game.toggleHelp()" style="width:80%; margin-top:10px;">ヘルプ / 攻略情報</button>
@@ -250,7 +288,7 @@
 
     <div id="modal-encounter" class="modal-overlay">
         <div class="modal-content">
-            <h2 class="c-red">モンスター出現！</h2>
+            <h2 class="c-red">困った人が出現！</h2>
             <div id="encounter-msg" style="font-style:italic; margin:20px 0; font-size:1.1em;"></div>
             <p id="encounter-enemy-name" style="font-weight:bold;"></p>
             <button onclick="Battle.startCombat()" style="width:80%; background:#e74c3c;">戦闘開始！</button>
@@ -263,16 +301,20 @@
             <ul style="text-align:left; padding-left:20px; font-size:0.9em; line-height:1.8;">
                 <li><b>目的:</b> 全10階層に存在する地域の「困った人たち」を説得し、魔王はぬぬを倒すこと。</li>
                 <li><b>成長:</b> 敵を倒すとPt獲得。「会議室」で能力に振り分けてください。
-                    <br>・<b>筋力:</b> 攻撃・防御UP (物理向け) HP+15
-                    <br>・<b>知力:</b> MP・魔法力UP (魔法向け) MP+10
-                    <br>・<b>敏捷:</b> 行動順・回避UP (全員重要)
+                    <br>・<b>筋力:</b> 攻撃・防御UP (物理向け) / HP+15
+                    <br>・<b>知力:</b> MP・魔法力UP (魔法向け) / MP+10
+                    <br>・<b>敏捷:</b> 行動順・回避UP (全員に重要)
                 </li>
-                <li><b>★隠しスキル:</b> 各ステータスが<span class="c-yellow">15</span>を超えると、強力な第2スキルが解禁されます！</li>
+                <li><b>★隠しスキル:</b> 各キャラクターには条件を満たすことで解禁される<b>第2スキル</b>があります。
+                    <br>その条件はキャラクターのタイプによって異なります。
+                    <br>「強さの追求」「速さの極致」「知識の深化」...
+                    <br>あるいは「全方位の鍛錬」が必要かもしれません。
+                </li>
                 <li><b>マック男の仕様:</b> MPではなく「所持金」を消費して戦います。</li>
-                <li><b>防御/集中:</b> 防御するとダメージ軽減に加え、MPが少し回復します。</li>
+                <li><b>防御/集中:</b> ダメージを軽減し、MPが回復します。</li>
                 <li><b>注意:</b> パーティメンバーが全員倒れると敗北です。</li>
             </ul>
-            <button onclick="Game.toggleHelp()" style="margin-top:15px;">閉じる</button>
+            <button onclick="Game.toggleHelp()" style="margin-top:15px; width:100%;">閉じる</button>
         </div>
     </div>
     
@@ -285,106 +327,263 @@
     </div>
 </div>
 
+<button class="help-button" onclick="Game.toggleHelp()" title="ヘルプを表示">?</button>
+
 <script>
 /* --- 1. データ定義 (キャラクター & 敵) --- */
-const UNLOCK_THRESHOLD = 15;
 
 const ROLES = {
     nayuta: { 
-        name: "勇者：なゆた", stats: { str:8, int:5, agi:6 }, 
+        name: "勇者：なゆた", 
+        stats: { str:8, int:5, agi:6 },
+        type: "balanced",
+        unlockRequirement: { str: 22, int: 22, agi: 22 },
         skill1: { name:"勇気の号令", cost:15, desc:"味方全員の攻撃UP" },
         skill2: { name:"ギガベール", cost:40, desc:"[必殺] 味方全員無敵(1T)", type:"support" },
         desc: "おなじみ我らが勇者。お風呂と数字は苦手。",
         quotes: { atk:["任せて！","大丈夫です！"], skill:["私、歌います！","みんなのチカラを一つに！"], guard:["様子を見ます。"], win:["会議は踊る、されど進まず…"] }
     },
     kakapo: { 
-        name: "冷徹会計：カカポ", stats: { str:3, int:10, agi:5 },
+        name: "冷徹会計：カカポ", 
+        stats: { str:3, int:10, agi:5 },
+        type: "magic",
+        unlockRequirement: { int: 28 },
         skill1: { name:"予算凍結", cost:15, desc:"敵単体に氷属性大ダメージ" },
         skill2: { name:"強制監査", cost:30, desc:"[必殺] 敵の現HPを20%削る", type:"magic" },
         desc: "無駄な出費は1円も許さない。",
         quotes: { atk:["計算通り。","無駄ですね。"], skill:["凍結処分とします。","監査に入ります！"], guard:["リスクヘッジ。"], win:["決算報告、異常なし。"] }
     },
     fum: { 
-        name: "慈愛の僧侶：fum", stats: { str:4, int:8, agi:5 },
+        name: "慈愛の僧侶：fum", 
+        stats: { str:4, int:8, agi:5 },
+        type: "support",
+        unlockRequirement: { int: 23, agi: 18 },
         skill1: { name:"癒やしの根回し", cost:15, desc:"味方全員のHP小回復" },
         skill2: { name:"聖なる嘆願書", cost:40, desc:"[必殺] 味方全員のHP完全回復", type:"heal" },
         desc: "事前の根回しでトラブルを防ぐ。",
         quotes: { atk:["おやめください！","痛いのはダメです。"], skill:["皆さんが無事でありますように…","根回ししておきました。"], guard:["耐えます…！"], win:["平和的解決ですね。"] }
     },
     yj: { 
-        name: "筋肉戦士：YJ", stats: { str:10, int:2, agi:4 },
+        name: "筋肉戦士：YJ", 
+        stats: { str:10, int:2, agi:4 },
+        type: "physical",
+        unlockRequirement: { str: 28 },
         skill1: { name:"肉体言語", cost:10, desc:"自分無敵(1T)+注目集め" },
         skill2: { name:"マッスルインパクト", cost:25, desc:"[必殺] 筋力依存の超極大ダメージ", type:"phys" },
         desc: "議論より筋肉で解決する。",
         quotes: { atk:["フンッ！","ヒョロガリが！"], skill:["俺の肩幅を見ろ！","プロテイン！！"], guard:["カッチカチだぞ！"], win:["パンプアップ完了！"] }
     },
     usan: { 
-        name: "エンジニア：うーさん", stats: { str:5, int:9, agi:6 },
+        name: "エンジニア：うーさん", 
+        stats: { str:5, int:9, agi:6 },
+        type: "magic",
+        unlockRequirement: { int: 26, agi: 20 },
         skill1: { name:"論理的ハック", cost:12, desc:"敵の攻撃＆防御ダウン" },
         skill2: { name:"システムダウン", cost:30, desc:"[必殺] 敵をスタン(行動不能)させる", type:"magic" },
         desc: "理詰めで相手を追い込む。",
         quotes: { atk:["バグ発見。","デバッグします。"], skill:["論理破綻してますよ。","脆弱性を突きます。"], guard:["ファイアウォール展開。"], win:["正常終了しました。"] }
     },
     akki: { 
-        name: "マック男：あっきー", stats: { str:6, int:6, agi:7 },
+        name: "マック男：あっきー", 
+        stats: { str:6, int:6, agi:7 },
+        type: "balanced",
+        unlockRequirement: { str: 20, int: 20, agi: 20 },
         skill1: { name:"ポテト乱れ投げ", cost:0, desc:"[金50G] ランダム3回攻撃" },
         skill2: { name:"スマイル0円", cost:0, desc:"[必殺] 味方全員のMP回復+攻撃UP", type:"special" },
         desc: "全てはマクドナルドのために。",
         quotes: { atk:["いらっしゃいませ！","ご一緒にいかが？"], skill:["揚げたてですよ！","スマイル入ります！"], guard:["ドライブスルーで。"], win:["i'm lovin' it."] }
     },
     akachan: { 
-        name: "女優：あかちゃん", stats: { str:4, int:7, agi:8 },
+        name: "女優：あかちゃん", 
+        stats: { str:4, int:7, agi:8 },
+        type: "speed",
+        unlockRequirement: { agi: 28 },
         skill1: { name:"嘘泣き", cost:15, desc:"敵を魅了し行動不能にする" },
         skill2: { name:"主演女優賞", cost:35, desc:"[必殺] 敵全体に精神的特大ダメージ", type:"magic" },
         desc: "演技力で世渡りする策士。",
         quotes: { atk:["やだぁ～♡","ごめんなさぁい"], skill:["私、かわいそうでしょ？","見て！私の演技を！"], guard:["メイク直さなきゃ。"], win:["お疲れ様でした～(素)"] }
     },
     shira: { 
-        name: "自由人：しらさか", stats: { str:6, int:6, agi:9 },
+        name: "自由人：しらさか", 
+        stats: { str:6, int:6, agi:9 },
+        type: "speed",
+        unlockRequirement: { agi: 27, int: 15 },
         skill1: { name:"ちゃぶ台返し", cost:20, desc:"ランダム効果(回復/攻撃/自爆)" },
         skill2: { name:"ドタキャン", cost:20, desc:"[必殺] 敵のターンを強制スキップ", type:"special" },
         desc: "会議を白紙に戻すトリックスター。",
         quotes: { atk:["飽きたな～","それっ"], skill:["はい、やり直し！","今日は帰りまーす。"], guard:["聞いてませーん。"], win:["自由だー！！"] }
     },
     nyanya: { 
-        name: "創造者：にゃーにゃ", stats: { str:5, int:8, agi:6 },
+        name: "創造者：にゃーにゃ", 
+        stats: { str:5, int:8, agi:6 },
+        type: "support",
+        unlockRequirement: { int: 21, agi: 21 },
         skill1: { name:"イベント企画", cost:20, desc:"味方全員にバリア(HP+)" },
         skill2: { name:"天地創造", cost:50, desc:"[必殺] 味方全員全能力UP", type:"support" },
         desc: "楽しい企画で士気を上げる。",
         quotes: { atk:["これどう？","エイッ！"], skill:["新しい企画思いついた！","皆が楽しめる世界を！"], guard:["準備期間です。"], win:["大成功だね！"] }
     },
     kokona: { 
-        name: "食いしん坊：ここな", stats: { str:7, int:4, agi:6 },
+        name: "食いしん坊：ここな", 
+        stats: { str:7, int:4, agi:6 },
+        type: "physical",
+        unlockRequirement: { str: 25, agi: 18 },
         skill1: { name:"つまみ食い", cost:10, desc:"攻撃して自分のHP回復" },
         skill2: { name:"宴会部長", cost:30, desc:"[必殺] 敵全体を飲み込む(即死or大ダメ)", type:"phys" },
         desc: "差し入れは全て彼女の胃袋へ。",
         quotes: { atk:["いただきます！","おかわり！"], skill:["それ美味しそう！","もぐもぐ…"], guard:["食休み中。"], win:["ごちそうさまでした！"] }
     },
-    terror: { name:"AI：テロル", stats:{str:5,int:9,agi:7}, skill1:{name:"ハルシネーション",cost:15,desc:"敵の命中率ダウン"}, skill2:{name:"シンギュラリティ",cost:40,desc:"敵全体に知力特大ダメ"}, desc:"予測不能なAI。", quotes:{atk:["演算中...","削除します"],skill:["学習しました","神を生成します"],guard:["プロテクト"],win:["最適解でした"]} },
-    orange: { name:"万博博士：Orange", stats:{str:4,int:10,agi:4}, skill1:{name:"パビリオン建設",cost:20,desc:"味方防御UP"}, skill2:{name:"未来の輝き",cost:35,desc:"敵全体に光ダメージ"}, desc:"未来を見据える博士。", quotes:{atk:["実験開始","データ収集"],skill:["これが未来だ！","万博へようこそ"],guard:["分析中"],win:["科学の勝利だ"]} },
-    jyun: { name:"ハンター：ぢゅん汰", stats:{str:9,int:3,agi:8}, skill1:{name:"シカ撃ち",cost:15,desc:"必中クリティカル攻撃"}, skill2:{name:"イノシシ狩り",cost:30,desc:"ランダム4回攻撃"}, desc:"獲物は逃さない。", quotes:{atk:["逃さん！","バン！"],skill:["急所だ！","ハチの巣にしてやる"],guard:["隠れる"],win:["狩り終了"]} },
-    neo: { name:"レジェンド：ネオ", stats:{str:8,int:8,agi:6}, skill1:{name:"伝説の威圧",cost:15,desc:"敵攻撃ダウン"}, skill2:{name:"古の必殺技",cost:40,desc:"敵全体特大ダメージ"}, desc:"生きる伝説。", quotes:{atk:["未熟！","遅い"],skill:["これが格の違いだ","伝説を見せてやろう"],guard:["見切った"],win:["まだまだだな"]} },
-    ebi: { name:"えびちり：えびちり", stats:{str:6,int:8,agi:5}, skill1:{name:"激辛ソース",cost:15,desc:"敵に継続ダメージ(毒)"}, skill2:{name:"エクスプロージョン",cost:35,desc:"敵全体炎ダメージ"}, desc:"ピリリと辛い。", quotes:{atk:["熱いよ！","辛口でいくよ"],skill:["燃え上がれ！","激辛だぞ！"],guard:["殻に籠もる"],win:["ホットだねぇ"]} },
-    fura: { name:"沖縄県民：ふらふら", stats:{str:5,int:6,agi:8}, skill1:{name:"なんくるないさ",cost:20,desc:"味方HP回復+状態異常治癒"}, skill2:{name:"指笛",cost:20,desc:"味方全員の素早さUP"}, desc:"時間は守らない。", quotes:{atk:["いくさー","ハイサイ"],skill:["なんとかなるさー","踊ろう！"],guard:["ゆっくりしよう"],win:["オリオンビールで乾杯！"]} },
-    tan: { name:"パンダ：タンタン", stats:{str:9,int:2,agi:5}, skill1:{name:"笹アタック",cost:10,desc:"物理大ダメージ"}, skill2:{name:"癒やしのモフモフ",cost:30,desc:"味方全員HP回復"}, desc:"可愛い顔して凶暴。", quotes:{atk:["アーン！","パンチ！"],skill:["笹くれ！","転がるぞ！"],guard:["寝る..."],win:["(笹を食べている)"]} },
-    tom: { name:"闘病中：トム", stats:{str:3,int:9,agi:4}, skill1:{name:"点滴ビーム",cost:15,desc:"敵のHP吸収"}, skill2:{name:"院内感染",cost:40,desc:"敵全体に毒+病気(弱体)"}, desc:"病院からの刺客。", quotes:{atk:["注射します","消毒だ"],skill:["お薬出しときます","隔離します"],guard:["安静にします"],win:["退院します！"]} },
-    bull: { name:"変態紳士：ブル閣下", stats:{str:7,int:7,agi:4}, skill1:{name:"紳士の嗜み",cost:15,desc:"自分の攻撃UP"}, skill2:{name:"変態の極み",cost:50,desc:"超極大ダメだが自分もダメ"}, desc:"紳士的な変態。", quotes:{atk:["ごきげんよう","失敬"],skill:["素晴らしい！","興奮してきました！"],guard:["冷静に..."],win:["実に美しい..."]} },
-    deka: { name:"肉うどん：デカ盛り", stats:{str:10,int:1,agi:3}, skill1:{name:"麺アタック",cost:10,desc:"敵を拘束(敏捷ダウン)"}, skill2:{name:"カロリー爆弾",cost:30,desc:"敵単体に超特大物理ダメ"}, desc:"圧倒的ボリューム。", quotes:{atk:["大盛りだ！","コシが命！"],skill:["飲み干してやる","増量中！"],guard:["伸びちゃう..."],win:["完食！"]} },
-    aru: { name:"当たり年：ある意味", stats:{str:1,int:10,agi:8}, skill1:{name:"不運の伝染",cost:15,desc:"敵の命中率激減"}, skill2:{name:"厄落とし",cost:30,desc:"敵HP10%+デバフ解除"}, desc:"歩く厄年。", quotes:{atk:["またか...","巻き添えだ"],skill:["不幸になあれ","お裾分けです"],guard:["何もしたくない"],win:["生きててよかった"]} },
-    mako: { name:"モアイ愛好家：まこ", stats:{str:8,int:4,agi:2}, skill1:{name:"石像召喚",cost:20,desc:"味方全体の防御UP"}, skill2:{name:"イースターの怒り",cost:35,desc:"敵全体に地属性大ダメ"}, desc:"心はイースター島。", quotes:{atk:["🗿アタック","硬いぞ"],skill:["🗿ビーム！","並びなさい"],guard:["🗿ガード"],win:["🗿..."]} },
-    daime: { name:"他責主義：代名詞", stats:{str:5,int:5,agi:10}, skill1:{name:"責任転嫁",cost:10,desc:"自分が受けるダメを敵に返す"}, skill2:{name:"人のせい",cost:20,desc:"敵の攻撃対象をランダム化"}, desc:"全部あいつのせい。", quotes:{atk:["お前のせいだ","知らないよ"],skill:["俺じゃない！","あいつがやった"],guard:["関係ないね"],win:["俺のおかげだ"]} },
-    chichi: { name:"息子ピクミン：ちちち", stats:{str:2,int:8,agi:8}, skill1:{name:"引っこ抜く",cost:15,desc:"敵のバフを解除"}, skill2:{name:"運搬",cost:25,desc:"倒れた味方1人を蘇生"}, desc:"ついていきます。", quotes:{atk:["えいっ","投げるよ"],skill:["運んで！","増えます"],guard:["埋まる"],win:["食べられなくてよかった"]} },
+    terror: { 
+        name:"AI：テロル", 
+        stats:{str:5,int:9,agi:7}, 
+        type: "magic",
+        unlockRequirement: { int: 27, agi: 21 },
+        skill1:{name:"ハルシネーション",cost:15,desc:"敵の命中率ダウン"}, 
+        skill2:{name:"シンギュラリティ",cost:40,desc:"敵全体に知力特大ダメ"}, 
+        desc:"予測不能なAI。", 
+        quotes:{atk:["演算中...","削除します"],skill:["学習しました","神を生成します"],guard:["プロテクト"],win:["最適解でした"]}
+    },
+    orange: { 
+        name:"万博博士：Orange", 
+        stats:{str:4,int:10,agi:4}, 
+        type: "magic",
+        unlockRequirement: { int: 29 },
+        skill1:{name:"パビリオン建設",cost:20,desc:"味方防御UP"}, 
+        skill2:{name:"未来の輝き",cost:35,desc:"敵全体に光ダメージ"}, 
+        desc:"未来を見据える博士。", 
+        quotes:{atk:["実験開始","データ収集"],skill:["これが未来だ！","万博へようこそ"],guard:["分析中"],win:["科学の勝利だ"]}
+    },
+    jyun: { 
+        name:"ハンター：ぢゅん汰", 
+        stats:{str:9,int:3,agi:8}, 
+        type: "speed",
+        unlockRequirement: { agi: 26, str: 20 },
+        skill1:{name:"シカ撃ち",cost:15,desc:"必中クリティカル攻撃"}, 
+        skill2:{name:"イノシシ狩り",cost:30,desc:"ランダム4回攻撃"}, 
+        desc:"獲物は逃さない。", 
+        quotes:{atk:["逃さん！","バン！"],skill:["急所だ！","ハチの巣にしてやる"],guard:["隠れる"],win:["狩り終了"]}
+    },
+    neo: { 
+        name:"レジェンド：ネオ", 
+        stats:{str:8,int:8,agi:6}, 
+        type: "balanced",
+        unlockRequirement: { str: 21, int: 21, agi: 19 },
+        skill1:{name:"伝説の威圧",cost:15,desc:"敵攻撃ダウン"}, 
+        skill2:{name:"古の必殺技",cost:40,desc:"敵全体特大ダメージ"}, 
+        desc:"生きる伝説。", 
+        quotes:{atk:["未熟！","遅い"],skill:["これが格の違いだ","伝説を見せてやろう"],guard:["見切った"],win:["まだまだだな"]}
+    },
+    ebi: { 
+        name:"えびちり：えびちり", 
+        stats:{str:6,int:8,agi:5}, 
+        type: "magic",
+        unlockRequirement: { int: 25, str: 18 },
+        skill1:{name:"激辛ソース",cost:15,desc:"敵に継続ダメージ(毒)"}, 
+        skill2:{name:"エクスプロージョン",cost:35,desc:"敵全体炎ダメージ"}, 
+        desc:"ピリリと辛い。", 
+        quotes:{atk:["熱いよ！","辛口でいくよ"],skill:["燃え上がれ！","激辛だぞ！"],guard:["殻に籠もる"],win:["ホットだねぇ"]}
+    },
+    fura: { 
+        name:"沖縄県民：ふらふら", 
+        stats:{str:5,int:6,agi:8}, 
+        type: "speed",
+        unlockRequirement: { agi: 25, int: 16 },
+        skill1:{name:"なんくるないさ",cost:20,desc:"味方HP回復+状態異常治癒"}, 
+        skill2:{name:"指笛",cost:20,desc:"味方全員の素早さUP"}, 
+        desc:"時間は守らない。", 
+        quotes:{atk:["いくさー","ハイサイ"],skill:["なんとかなるさー","踊ろう！"],guard:["ゆっくりしよう"],win:["オリオンビールで乾杯！"]}
+    },
+    tan: { 
+        name:"パンダ：タンタン", 
+        stats:{str:9,int:2,agi:5}, 
+        type: "physical",
+        unlockRequirement: { str: 27 },
+        skill1:{name:"笹アタック",cost:10,desc:"物理大ダメージ"}, 
+        skill2:{name:"癒やしのモフモフ",cost:30,desc:"味方全員HP回復"}, 
+        desc:"可愛い顔して凶暴。", 
+        quotes:{atk:["アーン！","パンチ！"],skill:["笹くれ！","転がるぞ！"],guard:["寝る..."],win:["(笹を食べている)"]}
+    },
+    tom: { 
+        name:"闘病中：トム", 
+        stats:{str:3,int:9,agi:4}, 
+        type: "magic",
+        unlockRequirement: { int: 26 },
+        skill1:{name:"点滴ビーム",cost:15,desc:"敵のHP吸収"}, 
+        skill2:{name:"院内感染",cost:40,desc:"敵全体に毒+病気(弱体)"}, 
+        desc:"病院からの刺客。", 
+        quotes:{atk:["注射します","消毒だ"],skill:["お薬出しときます","隔離します"],guard:["安静にします"],win:["退院します！"]}
+    },
+    bull: { 
+        name:"変態紳士：ブル閣下", 
+        stats:{str:7,int:7,agi:4}, 
+        type: "balanced",
+        unlockRequirement: { str: 19, int: 19, agi: 16 },
+        skill1:{name:"紳士の嗜み",cost:15,desc:"自分の攻撃UP"}, 
+        skill2:{name:"変態の極み",cost:50,desc:"超極大ダメだが自分もダメ"}, 
+        desc:"紳士的な変態。", 
+        quotes:{atk:["ごきげんよう","失敬"],skill:["素晴らしい！","興奮してきました！"],guard:["冷静に..."],win:["実に美しい..."]}
+    },
+    deka: { 
+        name:"肉うどん：デカ盛り", 
+        stats:{str:10,int:1,agi:3}, 
+        type: "physical",
+        unlockRequirement: { str: 29 },
+        skill1:{name:"麺アタック",cost:10,desc:"敵を拘束(敏捷ダウン)"}, 
+        skill2:{name:"カロリー爆弾",cost:30,desc:"敵単体に超特大物理ダメ"}, 
+        desc:"圧倒的ボリューム。", 
+        quotes:{atk:["大盛りだ！","コシが命！"],skill:["飲み干してやる","増量中！"],guard:["伸びちゃう..."],win:["完食！"]}
+    },
+    aru: { 
+        name:"当たり年：ある意味", 
+        stats:{str:1,int:10,agi:8}, 
+        type: "magic",
+        unlockRequirement: { int: 27, agi: 22 },
+        skill1:{name:"不運の伝染",cost:15,desc:"敵の命中率激減"}, 
+        skill2:{name:"厄落とし",cost:30,desc:"敵HP10%+デバフ解除"}, 
+        desc:"歩く厄年。", 
+        quotes:{atk:["またか...","巻き添えだ"],skill:["不幸になあれ","お裾分けです"],guard:["何もしたくない"],win:["生きててよかった"]}
+    },
+    mako: { 
+        name:"モアイ愛好家：まこ", 
+        stats:{str:8,int:4,agi:2}, 
+        type: "physical",
+        unlockRequirement: { str: 24 },
+        skill1:{name:"石像召喚",cost:20,desc:"味方全体の防御UP"}, 
+        skill2:{name:"イースターの怒り",cost:35,desc:"敵全体に地属性大ダメ"}, 
+        desc:"心はイースター島。", 
+        quotes:{atk:["🗿アタック","硬いぞ"],skill:["🗿ビーム！","並びなさい"],guard:["🗿ガード"],win:["🗿..."]}
+    },
+    daime: { 
+        name:"他責主義：代名詞", 
+        stats:{str:5,int:5,agi:10}, 
+        type: "speed",
+        unlockRequirement: { agi: 29 },
+        skill1:{name:"責任転嫁",cost:10,desc:"自分が受けるダメを敵に返す"}, 
+        skill2:{name:"人のせい",cost:20,desc:"敵の攻撃対象をランダム化"}, 
+        desc:"全部あいつのせい。", 
+        quotes:{atk:["お前のせいだ","知らないよ"],skill:["俺じゃない！","あいつがやった"],guard:["関係ないね"],win:["俺のおかげだ"]}
+    },
+    chichi: { 
+        name:"息子ピクミン：ちちち", 
+        stats:{str:2,int:8,agi:8}, 
+        type: "support",
+        unlockRequirement: { int: 19, agi: 19 },
+        skill1:{name:"引っこ抜く",cost:15,desc:"敵のバフを解除"}, 
+        skill2:{name:"運搬",cost:25,desc:"倒れた味方1人を蘇生"}, 
+        desc:"ついていきます。", 
+        quotes:{atk:["えいっ","投げるよ"],skill:["運んで！","増えます"],guard:["埋まる"],win:["食べられなくてよかった"]}
+    },
 };
 
 const SHOP_ITEMS = [
-    { name: "栄養ドリンク", cost: 30, type: "item", effect: "heal_hp_100", desc:"HP100回復" },
-    { name: "魔法の聖水", cost: 50, type: "item", effect: "heal_mp_50", desc:"MP50回復" },
-    { name: "クレーム対応マニュアル", cost: 200, type: "equip", stat: "def", val: 5, desc:"防御+5" },
-    { name: "軽量スニーカー", cost: 200, type: "equip", stat: "spd", val: 5, desc:"素早さ+5" },
-    { name: "ブランド時計", cost: 500, type: "equip", stat: "hp", val: 100, desc:"最大HP+100" },
-    { name: "タブレット端末", cost: 500, type: "equip", stat: "mp", val: 50, desc:"最大MP+50" },
-    { name: "伝説の拡声器", cost: 1000, type: "equip", stat: "atk", val: 20, desc:"攻撃+20" },
-    { name: "魔導プロジェクタ", cost: 1000, type: "equip", stat: "matk", val: 20, desc:"魔力+20" }
+    { name: "栄養ドリンク", cost: 30, type: "item", effect: "heal_hp_100", desc:"全員のHP100回復" },
+    { name: "魔法の聖水", cost: 50, type: "item", effect: "heal_mp_50", desc:"全員のMP50回復" },
+    { name: "クレーム対応マニュアル", cost: 200, type: "equip", stat: "def", val: 5, desc:"全員の防御+5" },
+    { name: "軽量スニーカー", cost: 200, type: "equip", stat: "spd", val: 5, desc:"全員の素早さ+5" },
+    { name: "ブランド時計", cost: 500, type: "equip", stat: "hp", val: 100, desc:"全員の最大HP+100" },
+    { name: "タブレット端末", cost: 500, type: "equip", stat: "mp", val: 50, desc:"全員の最大MP+50" },
+    { name: "伝説の拡声器", cost: 1000, type: "equip", stat: "atk", val: 20, desc:"全員の攻撃+20" },
+    { name: "魔導プロジェクタ", cost: 1000, type: "equip", stat: "matk", val: 20, desc:"全員の魔力+20" }
 ];
 
 const ENEMIES = [
@@ -491,6 +690,8 @@ const Game = {
                 addStats: { str:0, int:0, agi:0 },
                 skill1: base.skill1,
                 skill2: base.skill2,
+                type: base.type,
+                unlockRequirement: base.unlockRequirement,
                 quotes: base.quotes || {atk:["たぁ！"], skill:["いくぞ！"], guard:["守る！"], win:["勝利！"]},
                 hp: 0, maxHp: 0, mp: 0, maxMp: 0,
                 atk: 0, matk:0, def: 0, spd: 0,
@@ -542,6 +743,24 @@ const Game = {
         shop.innerHTML = '';
 
         State.party.forEach((p, idx) => {
+            const charData = ROLES[p.id];
+            const req = charData.unlockRequirement;
+            let skillUnlockInfo = "";
+            
+            // スキル解禁進捗を計算
+            let allMet = true;
+            for (let stat in req) {
+                const totalVal = p.baseStats[stat] + p.addStats[stat];
+                if (totalVal < req[stat]) {
+                    allMet = false;
+                    break;
+                }
+            }
+            
+            if (allMet) {
+                skillUnlockInfo = `<div style="color:#2ecc71; font-size:0.75em; margin-top:4px;">★隠しスキル解禁！</div>`;
+            }
+
             let html = `
                 <div class="status-card">
                     <div style="display:flex; justify-content:space-between;">
@@ -556,6 +775,15 @@ const Game = {
                         <button onclick="Game.addStat(${idx},'str')" ${p.pts<=0?'disabled':''}>筋 ${p.baseStats.str+p.addStats.str}</button>
                         <button onclick="Game.addStat(${idx},'int')" ${p.pts<=0?'disabled':''}>知 ${p.baseStats.int+p.addStats.int}</button>
                         <button onclick="Game.addStat(${idx},'agi')" ${p.pts<=0?'disabled':''}>敏 ${p.baseStats.agi+p.addStats.agi}</button>
+                    </div>
+                    <div class="skill-info">
+                        <div class="skill-info-title">特技：${p.skill1.name}</div>
+                        <div class="skill-info-desc">${p.skill1.desc}</div>
+                    </div>
+                    <div class="skill-info">
+                        <div class="skill-info-title">★必殺：${p.skill2.name}</div>
+                        <div class="skill-info-desc">${p.skill2.desc}</div>
+                        ${skillUnlockInfo}
                     </div>
                 </div>`;
             list.innerHTML += html;
@@ -692,6 +920,18 @@ const Battle = {
         Battle.turnQueue = entities;
         Battle.nextTurn();
     },
+    checkSkillUnlock: (actor) => {
+        if (!actor.unlockRequirement) return false;
+        
+        const requirement = actor.unlockRequirement;
+        for (let stat in requirement) {
+            const totalValue = actor.baseStats[stat] + actor.addStats[stat];
+            if (totalValue < requirement[stat]) {
+                return false;
+            }
+        }
+        return true;
+    },
     nextTurn: () => {
         if (Battle.isProcessing) return;
 
@@ -730,19 +970,12 @@ const Battle = {
             const btn1 = document.getElementById('btn-skill1');
             const btn2 = document.getElementById('btn-skill2');
             
-            // あっきーのスキル1コスト表示修正
             const costUnit = actor.id === 'akki' ? 'G' : 'MP';
             const costVal = actor.id === 'akki' ? 50 : actor.skill1.cost;
             
             btn1.textContent = `${actor.skill1.name} (${costVal}${costUnit})`;
             
-            // 隠しスキル判定（合計値をチェック）
-            const totalStr = actor.baseStats.str + actor.addStats.str;
-            const totalInt = actor.baseStats.int + actor.addStats.int;
-            const totalAgi = actor.baseStats.agi + actor.addStats.agi;
-            
-            const skillUnlocked = totalStr >= UNLOCK_THRESHOLD || totalInt >= UNLOCK_THRESHOLD || totalAgi >= UNLOCK_THRESHOLD;
-            if (skillUnlocked) {
+            if (Battle.checkSkillUnlock(actor)) {
                 btn2.style.display = 'block';
                 btn2.textContent = `${actor.skill2.name} (★)`;
                 btn2.disabled = false;
@@ -787,7 +1020,6 @@ const Battle = {
             const skill = (type === 'skill1') ? actor.skill1 : actor.skill2;
             let canUse = true;
 
-            // コスト支払い判定
             if (actor.id === 'akki') {
                 const cost = (type === 'skill1') ? 50 : 0;
                 if (State.gold < cost) {
@@ -813,7 +1045,6 @@ const Battle = {
             
             quote = getRandomQuote('skill');
             
-            // スキル効果処理
             if (skill.type === 'heal' || skill.name.includes("回復") || skill.name.includes("スマイル")) {
                 let heal = actor.matk * 3;
                 if (skill.name.includes("完全")) heal = 9999;
@@ -836,7 +1067,6 @@ const Battle = {
                 }
 
             } else {
-                // 攻撃系スキル
                 let multiplier = (type === 'skill2') ? 4.0 : 2.0;
                 let dmg = Math.floor((actor.atk + actor.matk) * multiplier);
                 
@@ -891,7 +1121,6 @@ const Battle = {
             msg = `${e.name}の必殺話術！「${e.msg.replace(/「|」/g, '')}"<br>${target.name}に精神的<span class="c-red">${dmg}ダメージ！</span>`;
         }
         else {
-            // 通常攻撃
             if (e.buffs && e.buffs.charged) {
                 dmg = Math.floor(dmg * 2.5);
                 msg = `溜め攻撃が炸裂！ ドカン！！ `;
@@ -934,7 +1163,6 @@ const Battle = {
                     State.party.forEach(p => { if(p.hp>0) p.pts += 4; });
                     State.floor++;
                     alert(`勝利！\n活動資金 ${reward}G を獲得！`);
-                    // Game.fullHeal(); HP/MPは自然に減ったままにする
                     Game.toHub();
                 }, 800);
                 return true;
